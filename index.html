@@ -194,6 +194,140 @@
             document.getElementById('addBtn').innerText = "+ SAVE LINK";
             document.getElementById('cancelBtn').classList.add('hidden');
         }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Launchpad Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tile:active { transform: scale(0.96); filter: brightness(1.2); }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen p-4 pb-20">
+
+    <div class="max-w-md mx-auto">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-black italic text-blue-500">SYSTEM.CLOUD</h1>
+            <div class="flex gap-2">
+                <button onclick="setupGithub()" class="p-2 bg-slate-800 rounded-lg text-[10px] border border-blue-500/50">🔑 CONFIG GITHUB</button>
+                <button onclick="pushToGithub()" class="p-2 bg-blue-600 rounded-lg text-[10px] font-bold">☁️ PUSH DATA</button>
+            </div>
+        </header>
+
+        <section class="mb-8 bg-slate-800/50 border border-slate-700 p-4 rounded-3xl">
+            <input type="hidden" id="editIndex" value="-1">
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <input type="text" id="siteName" placeholder="Label" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700">
+                <input type="url" id="siteUrl" placeholder="URL" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700">
+            </div>
+            <button id="addBtn" onclick="addLink()" class="w-full bg-blue-600 font-bold py-3 rounded-xl">SAVE LOCALLY</button>
+        </section>
+
+        <div id="linksContainer" class="grid grid-cols-3 gap-3"></div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        let GITHUB_CONFIG = JSON.parse(localStorage.getItem('gh_config')) || { token: '', user: '', repo: '' };
+        let links = [];
+
+        // LOAD DATA FROM GITHUB ON START
+        async function fetchFromGithub() {
+            const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/main/links.json?t=${Date.now()}`;
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    links = await res.json();
+                    render();
+                }
+            } catch (e) { console.log("No remote file found yet."); }
+        }
+
+        function render() {
+            const container = document.getElementById('linksContainer');
+            container.innerHTML = links.map((link, index) => `
+                <div class="relative bg-slate-800/40 border border-slate-700 aspect-square rounded-2xl flex flex-col items-center justify-center p-2">
+                    <a href="${link.url}" class="text-center">
+                        <span class="text-xl font-bold text-blue-400">${link.name.substring(0,2).toUpperCase()}</span>
+                        <div class="text-[10px] uppercase mt-1 line-clamp-2">${link.name}</div>
+                    </a>
+                    <button onclick="deleteLink(${index})" class="absolute -top-1 -right-1 bg-red-900 w-5 h-5 rounded-full text-[10px]">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addLink() {
+            const name = document.getElementById('siteName').value;
+            let url = document.getElementById('siteUrl').value;
+            if(!url.startsWith('http')) url = 'https://' + url;
+            links.unshift({ name, url });
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteUrl').value = '';
+            render();
+            alert("Saved locally! Don't forget to 'PUSH DATA' to make it public.");
+        }
+
+        function deleteLink(index) {
+            links.splice(index, 1);
+            render();
+        }
+
+        // GITHUB API LOGIC
+        function setupGithub() {
+            const user = prompt("GitHub Username:", GITHUB_CONFIG.user);
+            const repo = prompt("Repository Name:", GITHUB_CONFIG.repo);
+            const token = prompt("Personal Access Token:", GITHUB_CONFIG.token);
+            if(user && repo && token) {
+                GITHUB_CONFIG = { user, repo, token };
+                localStorage.setItem('gh_config', JSON.stringify(GITHUB_CONFIG));
+                fetchFromGithub();
+            }
+        }
+
+        async function pushToGithub() {
+            if(!GITHUB_CONFIG.token) return alert("Please click CONFIG GITHUB first!");
+            
+            const apiURL = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/links.json`;
+            
+            // 1. Get current file SHA (required by GitHub to update)
+            let sha = "";
+            try {
+                const getRes = await fetch(apiURL, {
+                    headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` }
+                });
+                if(getRes.ok) {
+                    const getData = await getRes.json();
+                    sha = getData.sha;
+                }
+            } catch(e) {}
+
+            // 2. Push Update
+            const res = await fetch(apiURL, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: "Update links.json via StartPage",
+                    content: btoa(JSON.stringify(links, null, 2)), // Base64 encode
+                    sha: sha || null
+                })
+            });
+
+            if(res.ok) alert("Successfully synced to GitHub! Your friends can now see the updates.");
+            else alert("Error syncing. Check your token and repo permissions.");
+        }
+
+        if(GITHUB_CONFIG.user) fetchFromGithub();
+        render();
+    </script>
+</body>
+</html>
+
 
         function deleteLink(index) {
             if(confirm('Delete ' + links[index].name + '?')) {
@@ -262,32 +396,3 @@
             const nameEl = document.getElementById('siteName');
             const urlEl = document.getElementById('siteUrl');
             const editIdx = parseInt(document.getElementById('editIndex').value);
-            
-            let url = urlEl.value.trim();
-            if (!url) return;
-            if (!url.startsWith('http')) url = 'https://' + url;
-            
-            let name = nameEl.value.trim() || url.replace('https://','').split('.')[0];
-
-            if (editIdx > -1) {
-                links[editIdx] = { name, url };
-                document.getElementById('editIndex').value = "-1";
-                document.getElementById('addBtn').innerText = "+ ADD TO DASHBOARD";
-            } else {
-                links.push({ name, url });
-            }
-
-            nameEl.value = '';
-            urlEl.value = '';
-            render();
-        }
-
-        function startEdit(index) {
-            const link = links[index];
-            document.getElementById('siteName').value = link.name;
-            document.getElementById('siteUrl').value = link.url;
-            document.getElementById('editIndex').value = index;
-            document.getElementById('addBtn').innerText = "✓ UPDATE LINK";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
