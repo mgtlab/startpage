@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Launchpad Cloud OS</title>
+    <title>Launchpad Cloud Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .tile:active { transform: scale(0.96); filter: brightness(1.2); }
@@ -11,173 +11,203 @@
         .hidden { display: none !important; }
     </style>
 </head>
-<body class="bg-[#0f172a] text-slate-200 min-h-screen p-4 pb-20 font-sans selection:bg-blue-500/30">
+<body class="bg-[#0f172a] text-slate-200 min-h-screen p-4 pb-20 font-sans">
 
     <div class="max-w-md mx-auto">
         <header id="adminHeader" class="flex justify-between items-center mb-6 hidden">
-            <h1 class="text-xl font-black italic text-blue-500 tracking-tighter uppercase">System.Admin</h1>
+            <h1 class="text-xl font-black italic text-blue-500 uppercase tracking-tighter">Admin.Sync</h1>
             <div class="flex gap-2">
                 <button onclick="setupGithub()" class="p-2 bg-slate-800 rounded-lg text-[10px] border border-slate-700">CONFIG</button>
-                <button onclick="pushToGithub()" class="p-2 bg-blue-600 rounded-lg text-[10px] font-bold shadow-lg shadow-blue-500/20">PUSH DATA</button>
+                <button onclick="pushToGithub()" class="p-2 bg-blue-600 rounded-lg text-[10px] font-bold shadow-lg">PUSH DATA</button>
             </div>
         </header>
 
         <header id="publicHeader" class="mb-6 text-center">
-            <h1 class="text-2xl font-bold text-white tracking-tight">Curated Links</h1>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Public Launchpad</h1>
         </header>
 
-        <form action="https://www.google.com/search" method="GET" class="relative mb-8">
-            <input type="text" name="q" placeholder="Search Google..." class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 px-6 text-lg focus:border-blue-500 outline-none transition-all shadow-inner">
-            <button type="submit" class="absolute right-4 top-4 text-blue-400 text-xl">🔍</button>
+        <form action="https://www.google.com/search" method="GET" class="relative mb-6">
+            <input type="text" name="q" placeholder="Search Google..." class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 px-6 text-lg focus:border-blue-500 outline-none shadow-inner">
+            <button type="submit" class="absolute right-4 top-4 text-blue-400">🔍</button>
         </form>
 
-        <section id="adminInput" class="mb-10 bg-blue-600/5 border border-blue-500/20 p-5 rounded-3xl hidden shadow-2xl">
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <input type="text" id="siteName" placeholder="Site Label" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700 focus:border-blue-500 outline-none">
-                <input type="url" id="siteUrl" placeholder="URL (cnn.com)" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700 focus:border-blue-500 outline-none">
+        <section id="adminInput" class="mb-8 bg-blue-600/5 border border-blue-500/20 p-4 rounded-3xl hidden">
+            <input type="hidden" id="editIndex" value="-1">
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <input type="text" id="siteName" placeholder="Label" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700">
+                <input type="url" id="siteUrl" placeholder="URL" class="bg-slate-900 rounded-xl p-3 text-sm border border-slate-700">
             </div>
-            <button onclick="addLink()" class="w-full bg-blue-600 hover:bg-blue-500 font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-widest text-xs">
-                + Add Link Locally
-            </button>
+            <div class="flex gap-2">
+                <button id="addBtn" onclick="addLink()" class="flex-1 bg-blue-600 font-bold py-3 rounded-xl uppercase text-xs tracking-widest">+ Save Locally</button>
+                <button id="cancelBtn" onclick="resetForm()" class="hidden bg-slate-700 px-4 py-3 rounded-xl text-xs">✕</button>
+            </div>
         </section>
 
-        <div id="linksContainer" class="grid grid-cols-3 gap-3"></div>
+        <div class="flex justify-between items-center mb-4 px-1">
+            <input type="text" id="filterInput" oninput="render()" placeholder="Filter..." class="bg-transparent border-b border-slate-700 text-xs py-1 outline-none focus:border-blue-500 w-1/2">
+            <div class="flex bg-slate-800 rounded-lg p-1 scale-90">
+                <button onclick="setView('grid')" id="btnGrid" class="px-3 py-1 rounded-md text-[10px] bg-blue-600">GRID</button>
+                <button onclick="setView('list')" id="btnList" class="px-3 py-1 rounded-md text-[10px] ml-1">LIST</button>
+            </div>
+        </div>
 
-        <button onclick="setupGithub()" class="fixed bottom-4 right-4 bg-slate-800/50 p-3 rounded-full border border-slate-700 opacity-20 hover:opacity-100 text-lg transition-all">⚙️</button>
+        <div id="linksContainer"></div>
+        
+        <button onclick="setupGithub()" class="fixed bottom-4 right-4 bg-slate-800/50 p-3 rounded-full border border-slate-700 opacity-20 hover:opacity-100 transition-all">⚙️</button>
     </div>
 
-    
-     <script>
-    // HARDCODED DEFAULTS: This ensures your friends see YOUR links automatically
-    const DEFAULT_USER = 'mgtlab'; 
-    const DEFAULT_REPO = 'startpage';
+    <script>
+        const DEFAULT_USER = 'mgtlab';
+        const DEFAULT_REPO = 'startpage';
+        let GITHUB_CONFIG = JSON.parse(localStorage.getItem('gh_config')) || { token: '', user: DEFAULT_USER, repo: DEFAULT_REPO };
+        let links = [];
+        let currentView = 'grid';
 
-    // Load existing config from storage, or use the defaults above
-    let GITHUB_CONFIG = JSON.parse(localStorage.getItem('gh_config')) || { 
-        token: '', 
-        user: DEFAULT_USER, 
-        repo: DEFAULT_REPO 
-    };
-    
-    let links = [];
+        async function loadData() {
+            const isAdmin = !!GITHUB_CONFIG.token;
+            const localData = localStorage.getItem('local_links');
 
-    async function loadData() {
-        const isAdmin = !!GITHUB_CONFIG.token;
-        const localData = localStorage.getItem('local_links');
-
-        // 1. If YOU are browsing (Admin), show your unsynced local changes first
-        if (isAdmin && localData) {
-            links = JSON.parse(localData);
-            render();
-        } 
-        // 2. For FRIENDS (or you on a new device): Always pull from your GitHub JSON
-        else {
-            const user = GITHUB_CONFIG.user || DEFAULT_USER;
-            const repo = GITHUB_CONFIG.repo || DEFAULT_REPO;
-            
-            // The ?t= timestamp prevents the browser from showing an "old" version of the file
-            const url = `https://raw.githubusercontent.com/${user}/${repo}/main/links.json?t=${Date.now()}`;
-            
-            try {
-                const res = await fetch(url);
-                if (res.ok) {
-                    links = await res.json();
-                    render();
-                } else {
-                    console.error("Cloud file not found. Make sure links.json is Public.");
-                }
-            } catch (e) { 
-                console.warn("Connection error fetching cloud data."); 
+            if (isAdmin && localData) {
+                links = JSON.parse(localData);
+                render();
+            } else {
+                const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.user || DEFAULT_USER}/${GITHUB_CONFIG.repo || DEFAULT_REPO}/main/links.json?t=${Date.now()}`;
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) { links = await res.json(); render(); }
+                } catch (e) { console.warn("Fetch failed"); }
             }
         }
-    }
 
-    function render() {
-        const container = document.getElementById('linksContainer');
-        const isAdmin = !!GITHUB_CONFIG.token;
-
-        // UI Visibility Toggle
-        document.getElementById('adminHeader').classList.toggle('hidden', !isAdmin);
-        document.getElementById('adminInput').classList.toggle('hidden', !isAdmin);
-        document.getElementById('publicHeader').classList.toggle('hidden', isAdmin);
-
-        if (links.length === 0) {
-            container.innerHTML = '<p class="col-span-3 text-center opacity-50 py-10">No links found in cloud.</p>';
-            return;
+        function setView(view) {
+            currentView = view;
+            document.getElementById('btnGrid').classList.toggle('bg-blue-600', view === 'grid');
+            document.getElementById('btnList').classList.toggle('bg-blue-600', view === 'list');
+            render();
         }
 
-        container.innerHTML = links.map((link, index) => `
-            <div class="relative group">
-                <a href="${link.url}" class="tile flex flex-col items-center justify-center bg-slate-800/40 border border-slate-700/50 aspect-square rounded-2xl p-2 shadow-lg">
-                    <span class="text-xl font-bold text-blue-400 mb-1">${link.name.substring(0,2).toUpperCase()}</span>
-                    <span class="text-[10px] uppercase text-center font-medium leading-tight line-clamp-2">${link.name}</span>
-                </a>
-                ${isAdmin ? `
-                    <button onclick="deleteLink(${index})" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center border-2 border-[#0f172a] text-[10px] shadow-xl">✕</button>
-                ` : ''}
-            </div>
-        `).join('');
-        
-        // Save locally for the Admin session
-        if (isAdmin) localStorage.setItem('local_links', JSON.stringify(links));
-    }
+        function render() {
+            const container = document.getElementById('linksContainer');
+            const isAdmin = !!GITHUB_CONFIG.token;
+            const filter = document.getElementById('filterInput').value.toLowerCase();
+            const filtered = links.filter(l => l.name.toLowerCase().includes(filter) || l.url.toLowerCase().includes(filter));
 
-    function addLink() {
-        const nameEl = document.getElementById('siteName');
-        const urlEl = document.getElementById('siteUrl');
-        let url = urlEl.value.trim();
-        if (!url) return;
-        if (!url.startsWith('http')) url = 'https://' + url;
-        
-        const name = nameEl.value.trim() || url.split('//')[1].split('/')[0];
-        links.unshift({ name, url });
-        nameEl.value = '';
-        urlEl.value = '';
-        render();
-    }
+            document.getElementById('adminHeader').classList.toggle('hidden', !isAdmin);
+            document.getElementById('adminInput').classList.toggle('hidden', !isAdmin);
+            document.getElementById('publicHeader').classList.toggle('hidden', isAdmin);
 
-    function deleteLink(index) {
-        if(confirm('Delete link?')) { links.splice(index, 1); render(); }
-    }
+            if (currentView === 'grid') {
+                container.className = "grid grid-cols-3 gap-3";
+                container.innerHTML = filtered.map((link, idx) => {
+                    const originalIdx = links.indexOf(link);
+                    return `
+                    <div class="relative">
+                        <a href="${link.url}" class="tile flex flex-col items-center justify-center bg-slate-800/40 border border-slate-700 aspect-square rounded-2xl p-2">
+                            <span class="text-xl font-bold text-blue-400 mb-1">${link.name.substring(0,2).toUpperCase()}</span>
+                            <span class="text-[9px] uppercase text-center leading-tight line-clamp-2">${link.name}</span>
+                        </a>
+                        ${isAdmin ? `
+                            <div class="absolute -top-1 -right-1 flex flex-col gap-1">
+                                <button onclick="startEdit(${originalIdx})" class="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] border border-slate-900">✎</button>
+                                <button onclick="deleteLink(${originalIdx})" class="bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] border border-slate-900">✕</button>
+                            </div>
+                        ` : ''}
+                    </div>`;
+                }).join('');
+            } else {
+                container.className = "flex flex-col gap-2";
+                container.innerHTML = filtered.map((link, idx) => {
+                    const originalIdx = links.indexOf(link);
+                    return `
+                    <div class="flex items-center justify-between bg-slate-800/60 p-3 rounded-xl border border-slate-700">
+                        <a href="${link.url}" class="flex-1 truncate mr-4">
+                            <div class="font-bold text-sm text-blue-400 truncate">${link.name}</div>
+                            <div class="text-[10px] opacity-50 truncate">${link.url}</div>
+                        </a>
+                        ${isAdmin ? `
+                            <div class="flex gap-3">
+                                <button onclick="startEdit(${originalIdx})" class="text-blue-400 text-xs font-bold uppercase">Edit</button>
+                                <button onclick="deleteLink(${originalIdx})" class="text-red-400 text-xs font-bold uppercase">Del</button>
+                            </div>
+                        ` : ''}
+                    </div>`;
+                }).join('');
+            }
+            if(isAdmin) localStorage.setItem('local_links', JSON.stringify(links));
+        }
 
-    function setupGithub() {
-        const user = prompt("GitHub Username:", GITHUB_CONFIG.user || DEFAULT_USER);
-        const repo = prompt("Repo Name:", GITHUB_CONFIG.repo || DEFAULT_REPO);
-        const token = prompt("Secret Token (Your friends should leave this blank):", GITHUB_CONFIG.token);
-        
-        GITHUB_CONFIG = { user, repo, token };
-        localStorage.setItem('gh_config', JSON.stringify(GITHUB_CONFIG));
-        window.location.reload(); 
-    }
+        function addLink() {
+            const nameEl = document.getElementById('siteName');
+            const urlEl = document.getElementById('siteUrl');
+            const editIdx = parseInt(document.getElementById('editIndex').value);
+            let url = urlEl.value.trim();
+            if (!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            const name = nameEl.value.trim() || url.replace(/https?:\/\//,'').split('/')[0];
 
-    async function pushToGithub() {
-        if(!GITHUB_CONFIG.token) return alert("Error: No Token found. You cannot push without a token.");
-        
-        const apiURL = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/links.json`;
-        let sha = "";
-        
-        try {
-            const getRes = await fetch(apiURL, { headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } });
-            if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-        } catch(e) {}
+            if (editIdx > -1) { links[editIdx] = { name, url }; } 
+            else { links.unshift({ name, url }); }
 
-        const res = await fetch(apiURL, {
-            method: 'PUT',
-            headers: { 'Authorization': `token ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: "Cloud Sync",
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(links, null, 2)))),
-                sha: sha || null
-            })
-        });
+            resetForm();
+            render();
+        }
 
-        if(res.ok) alert("✅ Success! Your friends can now see the updated links.");
-        else alert("❌ Push Failed. Check if your repo is Public and your token is correct.");
-    }
+        function startEdit(idx) {
+            const link = links[idx];
+            document.getElementById('siteName').value = link.name;
+            document.getElementById('siteUrl').value = link.url;
+            document.getElementById('editIndex').value = idx;
+            document.getElementById('addBtn').innerText = "✓ Update Link";
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-    loadData();
-</script>
+        function resetForm() {
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteUrl').value = '';
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('addBtn').innerText = "+ Save Locally";
+            document.getElementById('cancelBtn').classList.add('hidden');
+        }
 
+        function deleteLink(idx) {
+            if(confirm('Delete?')) { links.splice(idx, 1); render(); }
+        }
+
+        function setupGithub() {
+            const user = prompt("User:", GITHUB_CONFIG.user);
+            const repo = prompt("Repo:", GITHUB_CONFIG.repo);
+            const token = prompt("Token:", GITHUB_CONFIG.token);
+            if(user && repo) {
+                GITHUB_CONFIG = { user, repo, token };
+                localStorage.setItem('gh_config', JSON.stringify(GITHUB_CONFIG));
+                window.location.reload();
+            }
+        }
+
+        async function pushToGithub() {
+            if(!GITHUB_CONFIG.token) return;
+            const apiURL = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/links.json`;
+            let sha = "";
+            try {
+                const getRes = await fetch(apiURL, { headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } });
+                if(getRes.ok) { const d = await getRes.json(); sha = d.sha; }
+            } catch(e) {}
+            const res = await fetch(apiURL, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Sync",
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(links, null, 2)))),
+                    sha: sha || null
+                })
+            });
+            alert(res.ok ? "✅ Synced!" : "❌ Error: " + res.status);
+        }
+
+        loadData();
+    </script>
 </body>
 </html>
+
 
