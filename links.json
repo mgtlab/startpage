@@ -1,11 +1,27 @@
 [
   {
-    "name": "Sstr",
-    "url": "https://www.srr.gf"
+    "name": "SDR LEFKADA",
+    "url": "http://sv6syq.ddns.net:8073/"
   },
   {
-    "name": "Shop",
-    "url": "https://www.e-shop.gr"
+    "name": "SDR EDESSA",
+    "url": "http://21900.proxy2.kiwisdr.com:8073/"
+  },
+  {
+    "name": "SDR ATHENS VARADERO",
+    "url": "https://varadero1000.ddns.net:8901/"
+  },
+  {
+    "name": "SDR ATHENS PHANTOM 30-30Mhz",
+    "url": "https://phantomsdr.no-ip.org:8900/"
+  },
+  {
+    "name": "SDR ZANTE",
+    "url": "http://sv8rv.dyndns.org:8073/"
+  },
+  {
+    "name": "MF/HF DSC Logs",
+    "url": "http://www.yaddnet.org/pages/php/search_index.php?"
   },
   {
     "name": "Test",
