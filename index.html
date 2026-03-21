@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Launchpad Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tile:active { transform: scale(0.96); filter: brightness(1.2); }
+        input:focus { outline: 2px solid #3b82f6; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen font-sans selection:bg-blue-500/30">
+
+    <div class="max-w-md mx-auto p-5">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-black tracking-tight text-white uppercase italic">System.Start</h1>
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="p-2 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700">↓ BACKUP</button>
+                <button onclick="importData()" class="p-2 bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-700">↑ LOAD</button>
+            </div>
+        </header>
+
+        <section class="mb-8">
+            <form action="https://www.google.com/search" method="GET" class="relative">
+                <input type="text" name="q" placeholder="Search the web..." 
+                    class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 px-6 text-lg focus:bg-slate-800 transition-all shadow-2xl"
+                    autocomplete="off">
+                <button type="submit" class="absolute right-4 top-4 text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </form>
+        </section>
+
+        <section class="mb-10 bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <input type="text" id="siteName" placeholder="Label" class="bg-slate-900/50 rounded-xl p-3 text-sm border border-slate-700">
+                <input type="url" id="siteUrl" placeholder="URL (e.g. cnn.com)" class="bg-slate-900/50 rounded-xl p-3 text-sm border border-slate-700">
+            </div>
+            <button onclick="addLink()" class="w-full bg-blue-600 font-bold py-3 rounded-xl shadow-lg shadow-blue-900/20 active:bg-blue-700">
+                + ADD TO DASHBOARD
+            </button>
+        </section>
+
+        <div id="linksContainer" class="grid grid-cols-3 gap-4">
+            </div>
+    </div>
+
+    <script>
+        // Use a namespaced key to avoid collisions
+        const STORAGE_KEY = 'dev_startpage_v1';
+        
+        let links = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
+            { name: 'GitHub', url: 'https://github.com' },
+            { name: 'YouTube', url: 'https://youtube.com' },
+            { name: 'GPT', url: 'https://chat.openai.com' }
+        ];
+
+        function render() {
+            const container = document.getElementById('linksContainer');
+            container.innerHTML = links.map((link, index) => `
+                <div class="relative group animate-in fade-in zoom-in duration-300">
+                    <a href="${link.url}" class="tile flex flex-col items-center justify-center bg-slate-800/40 border border-slate-700/50 aspect-square rounded-3xl transition-all hover:border-blue-500/50">
+                        <span class="text-2xl mb-1">${link.name.substring(0,2).toUpperCase()}</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest opacity-70 truncate w-16 text-center">${link.name}</span>
+                    </a>
+                    <button onclick="deleteLink(${index})" class="absolute -top-1 -right-1 bg-slate-900 border border-slate-700 text-red-400 rounded-full w-6 h-6 text-[10px] flex items-center justify-center shadow-xl">✕</button>
+                </div>
+            `).join('');
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+        }
+
+        function addLink() {
+            const nameEl = document.getElementById('siteName');
+            const urlEl = document.getElementById('siteUrl');
+            
+            let url = urlEl.value.trim();
+            if (!url) return;
+            
+            // Auto-fix URL
+            if (!url.startsWith('http')) url = 'https://' + url;
+            
+            // Auto-name if empty
+            let name = nameEl.value.trim();
+            if (!name) {
+                try {
+                    const domain = new URL(url).hostname.replace('www.', '');
+                    name = domain.split('.')[0];
+                } catch(e) { name = 'Link'; }
+            }
+
+            links.push({ name, url });
+            nameEl.value = '';
+            urlEl.value = '';
+            render();
+        }
+
+        function deleteLink(index) {
+            links.splice(index, 1);
+            render();
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(links, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `startpage_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (Array.isArray(imported)) {
+                            links = imported;
+                            render();
+                        }
+                    } catch(err) { alert('Invalid backup file.'); }
+                };
+                reader.readAsText(e.target.files[0]);
+            };
+            input.click();
+        }
+
+        render();
+    </script>
+</body>
+</html>
