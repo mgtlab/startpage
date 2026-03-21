@@ -46,117 +46,138 @@
         <button onclick="setupGithub()" class="fixed bottom-4 right-4 bg-slate-800/50 p-3 rounded-full border border-slate-700 opacity-20 hover:opacity-100 text-lg transition-all">⚙️</button>
     </div>
 
-    <script>
-        let GITHUB_CONFIG = JSON.parse(localStorage.getItem('gh_config')) || { token: '', user: '', repo: '' };
-        let links = [];
+    
+     <script>
+    // HARDCODED DEFAULTS: This ensures your friends see YOUR links automatically
+    const DEFAULT_USER = 'mgtlab'; 
+    const DEFAULT_REPO = 'startpage';
 
-        async function loadData() {
-    const isAdmin = !!GITHUB_CONFIG.token;
-    const localData = localStorage.getItem('local_links');
+    // Load existing config from storage, or use the defaults above
+    let GITHUB_CONFIG = JSON.parse(localStorage.getItem('gh_config')) || { 
+        token: '', 
+        user: DEFAULT_USER, 
+        repo: DEFAULT_REPO 
+    };
+    
+    let links = [];
 
-    // IF ADMIN: Show what's on the phone right now
-    if (isAdmin && localData) {
-        links = JSON.parse(localData);
-        render();
-    } 
-    // IF FRIEND (or Admin with no local data): Pull from GitHub
-    else if (GITHUB_CONFIG.user && GITHUB_CONFIG.repo) {
-        const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/main/links.json?t=${Date.now()}`;
-        try {
-            const res = await fetch(url);
-            if (res.ok) {
-                links = await res.json();
-                render();
-            }
-        } catch (e) { console.warn("Cloud offline"); }
-    }
-}
+    async function loadData() {
+        const isAdmin = !!GITHUB_CONFIG.token;
+        const localData = localStorage.getItem('local_links');
 
-
-        function render() {
-            const container = document.getElementById('linksContainer');
-            const isAdmin = !!GITHUB_CONFIG.token;
-
-            // UI Visibility
-            document.getElementById('adminHeader').classList.toggle('hidden', !isAdmin);
-            document.getElementById('adminInput').classList.toggle('hidden', !isAdmin);
-            document.getElementById('publicHeader').classList.toggle('hidden', isAdmin);
-
-            container.innerHTML = links.map((link, index) => `
-                <div class="relative group">
-                    <a href="${link.url}" class="tile flex flex-col items-center justify-center bg-slate-800/40 border border-slate-700/50 aspect-square rounded-2xl p-2 shadow-lg">
-                        <span class="text-xl font-bold text-blue-400 mb-1">${link.name.substring(0,2).toUpperCase()}</span>
-                        <span class="text-[10px] uppercase text-center font-medium leading-tight line-clamp-2">${link.name}</span>
-                    </a>
-                    ${isAdmin ? `
-                        <button onclick="deleteLink(${index})" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center border-2 border-[#0f172a] text-[10px] shadow-xl">✕</button>
-                    ` : ''}
-                </div>
-            `).join('');
-            
-            // Auto-save local session
-            localStorage.setItem('local_links', JSON.stringify(links));
-        }
-
-        function addLink() {
-            const nameEl = document.getElementById('siteName');
-            const urlEl = document.getElementById('siteUrl');
-            let url = urlEl.value.trim();
-            if (!url) return;
-            if (!url.startsWith('http')) url = 'https://' + url;
-            
-            const name = nameEl.value.trim() || url.split('//')[1].split('/')[0];
-            links.unshift({ name, url });
-            nameEl.value = '';
-            urlEl.value = '';
+        // 1. If YOU are browsing (Admin), show your unsynced local changes first
+        if (isAdmin && localData) {
+            links = JSON.parse(localData);
             render();
-        }
-
-        function deleteLink(index) {
-            if(confirm('Delete link?')) { links.splice(index, 1); render(); }
-        }
-
-        function setupGithub() {
-            const user = prompt("GitHub Username:", GITHUB_CONFIG.user);
-            const repo = prompt("Repo Name:", GITHUB_CONFIG.repo);
-            const token = prompt("Token (Required for PUSH):", GITHUB_CONFIG.token);
-            if(user && repo) {
-                GITHUB_CONFIG = { user, repo, token };
-                localStorage.setItem('gh_config', JSON.stringify(GITHUB_CONFIG));
-                window.location.reload(); // Refresh to apply changes
-            }
-        }
-
-        async function pushToGithub() {
-            if(!GITHUB_CONFIG.token) return alert("Missing Token!");
+        } 
+        // 2. For FRIENDS (or you on a new device): Always pull from your GitHub JSON
+        else {
+            const user = GITHUB_CONFIG.user || DEFAULT_USER;
+            const repo = GITHUB_CONFIG.repo || DEFAULT_REPO;
             
-            const apiURL = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/links.json`;
-            let sha = "";
+            // The ?t= timestamp prevents the browser from showing an "old" version of the file
+            const url = `https://raw.githubusercontent.com/${user}/${repo}/main/links.json?t=${Date.now()}`;
             
             try {
-                const getRes = await fetch(apiURL, { headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } });
-                if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
-            } catch(e) {}
-
-            const res = await fetch(apiURL, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: "Cloud Sync from Dashboard",
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(links, null, 2)))),
-                    sha: sha || null
-                })
-            });
-
-            if(res.ok) alert("✅ Sync Successful! Cloud updated.");
-            else {
-                const err = await res.json();
-                alert("❌ Sync Failed: " + err.message);
+                const res = await fetch(url);
+                if (res.ok) {
+                    links = await res.json();
+                    render();
+                } else {
+                    console.error("Cloud file not found. Make sure links.json is Public.");
+                }
+            } catch (e) { 
+                console.warn("Connection error fetching cloud data."); 
             }
         }
+    }
 
-        loadData();
-    </script> 
+    function render() {
+        const container = document.getElementById('linksContainer');
+        const isAdmin = !!GITHUB_CONFIG.token;
+
+        // UI Visibility Toggle
+        document.getElementById('adminHeader').classList.toggle('hidden', !isAdmin);
+        document.getElementById('adminInput').classList.toggle('hidden', !isAdmin);
+        document.getElementById('publicHeader').classList.toggle('hidden', isAdmin);
+
+        if (links.length === 0) {
+            container.innerHTML = '<p class="col-span-3 text-center opacity-50 py-10">No links found in cloud.</p>';
+            return;
+        }
+
+        container.innerHTML = links.map((link, index) => `
+            <div class="relative group">
+                <a href="${link.url}" class="tile flex flex-col items-center justify-center bg-slate-800/40 border border-slate-700/50 aspect-square rounded-2xl p-2 shadow-lg">
+                    <span class="text-xl font-bold text-blue-400 mb-1">${link.name.substring(0,2).toUpperCase()}</span>
+                    <span class="text-[10px] uppercase text-center font-medium leading-tight line-clamp-2">${link.name}</span>
+                </a>
+                ${isAdmin ? `
+                    <button onclick="deleteLink(${index})" class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center border-2 border-[#0f172a] text-[10px] shadow-xl">✕</button>
+                ` : ''}
+            </div>
+        `).join('');
+        
+        // Save locally for the Admin session
+        if (isAdmin) localStorage.setItem('local_links', JSON.stringify(links));
+    }
+
+    function addLink() {
+        const nameEl = document.getElementById('siteName');
+        const urlEl = document.getElementById('siteUrl');
+        let url = urlEl.value.trim();
+        if (!url) return;
+        if (!url.startsWith('http')) url = 'https://' + url;
+        
+        const name = nameEl.value.trim() || url.split('//')[1].split('/')[0];
+        links.unshift({ name, url });
+        nameEl.value = '';
+        urlEl.value = '';
+        render();
+    }
+
+    function deleteLink(index) {
+        if(confirm('Delete link?')) { links.splice(index, 1); render(); }
+    }
+
+    function setupGithub() {
+        const user = prompt("GitHub Username:", GITHUB_CONFIG.user || DEFAULT_USER);
+        const repo = prompt("Repo Name:", GITHUB_CONFIG.repo || DEFAULT_REPO);
+        const token = prompt("Secret Token (Your friends should leave this blank):", GITHUB_CONFIG.token);
+        
+        GITHUB_CONFIG = { user, repo, token };
+        localStorage.setItem('gh_config', JSON.stringify(GITHUB_CONFIG));
+        window.location.reload(); 
+    }
+
+    async function pushToGithub() {
+        if(!GITHUB_CONFIG.token) return alert("Error: No Token found. You cannot push without a token.");
+        
+        const apiURL = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/links.json`;
+        let sha = "";
+        
+        try {
+            const getRes = await fetch(apiURL, { headers: { 'Authorization': `token ${GITHUB_CONFIG.token}` } });
+            if(getRes.ok) { const data = await getRes.json(); sha = data.sha; }
+        } catch(e) {}
+
+        const res = await fetch(apiURL, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: "Cloud Sync",
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(links, null, 2)))),
+                sha: sha || null
+            })
+        });
+
+        if(res.ok) alert("✅ Success! Your friends can now see the updated links.");
+        else alert("❌ Push Failed. Check if your repo is Public and your token is correct.");
+    }
+
+    loadData();
+</script>
+
 </body>
 </html>
 
