@@ -51,24 +51,27 @@
         let links = [];
 
         async function loadData() {
-            // Priority 1: Check LocalStorage (Current session)
-            const localData = localStorage.getItem('local_links');
-            if (localData) {
-                links = JSON.parse(localData);
+    const isAdmin = !!GITHUB_CONFIG.token;
+    const localData = localStorage.getItem('local_links');
+
+    // IF ADMIN: Show what's on the phone right now
+    if (isAdmin && localData) {
+        links = JSON.parse(localData);
+        render();
+    } 
+    // IF FRIEND (or Admin with no local data): Pull from GitHub
+    else if (GITHUB_CONFIG.user && GITHUB_CONFIG.repo) {
+        const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/main/links.json?t=${Date.now()}`;
+        try {
+            const res = await fetch(url);
+            if (res.ok) {
+                links = await res.json();
                 render();
-            } 
-            // Priority 2: Pull from Cloud if no local data
-            else if (GITHUB_CONFIG.user && GITHUB_CONFIG.repo) {
-                const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/main/links.json?t=${Date.now()}`;
-                try {
-                    const res = await fetch(url);
-                    if (res.ok) {
-                        links = await res.json();
-                        render();
-                    }
-                } catch (e) { console.warn("Cloud offline"); }
             }
-        }
+        } catch (e) { console.warn("Cloud offline"); }
+    }
+}
+
 
         function render() {
             const container = document.getElementById('linksContainer');
