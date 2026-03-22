@@ -1,5 +1,25 @@
 [
   {
+    "name": "SDR RX. TX. INFO MAP",
+    "url": "https://rx-tx.info/map-sdr-points"
+  },
+  {
+    "name": "SDR WEBSDE",
+    "url": "http://websdr.org/"
+  },
+  {
+    "name": "SDR Holland University",
+    "url": "http://websdr.ewi.utwente.nl:8901/"
+  },
+  {
+    "name": "SDR BARI",
+    "url": "http://ik7fmo.ddns.net:8073/"
+  },
+  {
+    "name": "SDR KIWI MAP",
+    "url": "http://map.kiwisdr.com/"
+  },
+  {
     "name": "SDR LEFKADA",
     "url": "http://sv6syq.ddns.net:8073/"
   },
@@ -9,11 +29,11 @@
   },
   {
     "name": "SDR ATHENS VARADERO",
-    "url": "https://varadero1000.ddns.net:8901/"
+    "url": "http://varadero1000.ddns.net:8901/"
   },
   {
     "name": "SDR ATHENS PHANTOM 30-30Mhz",
-    "url": "https://phantomsdr.no-ip.org:8900/"
+    "url": "http://phantomsdr.no-ip.org:8900/"
   },
   {
     "name": "SDR ZANTE",
@@ -24,7 +44,7 @@
     "url": "http://www.yaddnet.org/pages/php/search_index.php?"
   },
   {
-    "name": "Test",
-    "url": "https://mgtlab.github.io/startpage/"
+    "name": "SDR KIWI LIST",
+    "url": "http://rx.kiwisdr.com/"
   }
 ]
