@@ -1,5 +1,9 @@
 [
   {
+    "name": "MF/HF Stations Sealagom",
+    "url": "https://www.sealagom.com/marine-resources/webpage/s/mfhf-stations/"
+  },
+  {
     "name": "SDR SPARTA",
     "url": "http://sv3gcb.ddns.net:8905/?tune=1805usb"
   },
