@@ -1,5 +1,9 @@
 [
   {
+    "name": "SDR PATRA THEA",
+    "url": "http://sv3aqo.zapto.org/#freq=1704000,mod=am,sql=-150"
+  },
+  {
     "name": "MF/HF Stations Sealagom",
     "url": "https://www.sealagom.com/marine-resources/webpage/s/mfhf-stations/"
   },
