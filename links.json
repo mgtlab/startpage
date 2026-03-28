@@ -1,35 +1,7 @@
 [
   {
-    "name": "2187.5 CW THESSALONIKI",
-    "url": "http://elektrongr.ddns.net:8073/?f=2187.5cw"
-  },
-  {
-    "name": "8195 TEL THESSALONIKI",
-    "url": "http://elektrongr.ddns.net:8073/?f=8195usb"
-  },
-  {
-    "name": "8195 TEL ZANTE",
-    "url": "http://sv8rv.dyndns.org:8073/?f=8195usb"
-  },
-  {
-    "name": "2187.5 DECODE SPARTA",
-    "url": "http://sv8rv.dyndns.org:8073/?f=2187.5cw&ext=dsc"
-  },
-  {
-    "name": "2187.5 CD ZANTE",
-    "url": "http://sv8rv.dyndns.org:8073/?f=2187.5cw"
-  },
-  {
-    "name": "2182 ZANTE",
-    "url": "http://sv8rv.dyndns.org:8073/?f=2182usb"
-  },
-  {
-    "name": "2187.5  CW SPARTA",
-    "url": "http://sv3gcb.ddns.net:8905/?tune=2187.5cw"
-  },
-  {
-    "name": "2182 SPART",
-    "url": "http://sv3gcb.ddns.net:8905/?tune=2182usb"
+    "name": "Bednblue distance calculator",
+    "url": "https://www.bednblue.com/sailing-distance-calculator"
   },
   {
     "name": "SDR PATRA THEA",
